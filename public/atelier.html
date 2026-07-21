@@ -122,6 +122,7 @@ async function loadDB(){
       DB = raw ? JSON.parse(raw) : emptyDB();
     }
   }catch(e){ DB = emptyDB(); }
+  if(!DB.commandes) DB.commandes = [];
 }
 let saveTimer=null;
 function saveDB(){
