@@ -541,6 +541,64 @@ function renderSales(){
   `;
 }
 
+/* ================= COMMANDES TAB ================= */
+const COMMANDE_STATUSES = ['waiting','ready','sold','cancel'];
+function statusPill(s){
+  const colors = {
+    waiting:'background:rgba(91,143,176,.18);color:var(--blue)',
+    ready:'background:rgba(201,162,75,.18);color:var(--brass)',
+    sold:'background:rgba(92,154,104,.18);color:var(--green)',
+    cancel:'background:rgba(193,68,60,.15);color:var(--red)'
+  };
+  return `<span class="pill" style="${colors[s]||''}">${s}</span>`;
+}
+function renderCommandes(){
+  const sorted = [...DB.commandes].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  return `
+  <h1>Commandes</h1>
+  <div class="subtitle">Custom client orders. Adding one auto-creates the sellable item; marking it "sold" logs a sale.</div>
+
+  <div class="card">
+    <h2>New commande</h2>
+    <form id="addCommandeForm" class="row">
+      <div class="field" style="min-width:220px"><label>Item name / description</label><input name="name" required placeholder="Table 50x50 red wood + paint"></div>
+      <div class="field"><label>Price (DT)</label><input type="number" step="any" min="0" name="price" required></div>
+      <div class="field" style="min-width:180px"><label>Client name</label><input name="client" placeholder="Client name"></div>
+      <div class="field" style="min-width:260px;flex:1"><label>Comment</label><input name="comment" placeholder="Notes, phone, deadline..."></div>
+      <div class="field"><label>Date</label><input type="date" name="date" value="${todayStr()}" required></div>
+      <button class="btn" type="submit">Add commande</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>All commandes</h2>
+    <table>
+      <thead><tr>
+        <th>Date</th><th>Item</th><th>Client</th><th>Comment</th>
+        <th class="num">Price</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${sorted.length===0?'<tr><td colspan="7" class="empty">No commandes yet.</td></tr>':''}
+        ${sorted.map(c=>`<tr>
+          <td>${c.date}</td>
+          <td style="font-family:var(--sans)">${esc(c.name)}</td>
+          <td style="font-family:var(--sans)">${esc(c.client||'—')}</td>
+          <td style="font-family:var(--sans);white-space:normal;max-width:280px">${esc(c.comment||'')}</td>
+          <td class="num">${money(c.price)}</td>
+          <td>
+            <select data-cmd-status="${c.id}" style="padding:5px 8px;font-size:12px">
+              ${COMMANDE_STATUSES.map(s=>`<option value="${s}"${s===c.status?' selected':''}>${s}</option>`).join('')}
+            </select>
+            <div style="margin-top:4px">${statusPill(c.status)}</div>
+          </td>
+          <td class="num"><button class="btn danger small" data-del-commande="${c.id}">Delete</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+  `;
+}
+
 /* ================= ADMIN TAB ================= */
 let adminFrom=null, adminTo=null;
 function renderAdmin(){
