@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atelier Ledger</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{
+  --bg:#14171a; --bg2:#1b1f23; --card:#20252b; --card2:#262c33;
+  --line:#343b42; --text:#eee9de; --muted:#9a988f; --muted2:#6f7178;
+  --brass:#c9a24b; --brass-dim:#8a7233; --green:#5c9a68; --red:#c1443c;
+  --blue:#5b8fb0; --radius:10px;
+  --serif:Georgia,'Iowan Old Style','Palatino Linotype',serif;
+  --mono:ui-monospace,'SF Mono',Consolas,'Courier New',monospace;
+  --sans:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+.app{display:flex;min-height:100vh}
+.sidebar{width:220px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--line);padding:22px 0;display:flex;flex-direction:column}
+.brand{font-family:var(--serif);font-size:22px;font-weight:700;letter-spacing:.5px;padding:0 20px 6px;color:var(--brass)}
+.brand small{display:block;font-family:var(--sans);font-size:10.5px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;font-weight:400}
+.nav{margin-top:18px;display:flex;flex-direction:column}
+.nav-btn{display:flex;align-items:center;gap:10px;padding:12px 20px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;text-align:left;border-left:3px solid transparent;font-family:var(--sans)}
+.nav-btn .idx{font-family:var(--mono);color:var(--muted2);font-size:12px;width:16px}
+.nav-btn:hover{color:var(--text);background:var(--card)}
+.nav-btn.active{color:var(--brass);border-left-color:var(--brass);background:var(--card)}
+.main{flex:1;padding:32px 40px;max-width:1180px}
+h1{font-family:var(--serif);font-size:28px;margin:0 0 4px;color:var(--text)}
+.subtitle{color:var(--muted);font-size:13px;margin-bottom:26px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:22px}
+.card h2{font-family:var(--serif);font-size:16px;margin:0 0 16px;color:var(--brass);font-weight:700;border-bottom:1px solid var(--line);padding-bottom:10px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:end}
+.field{display:flex;flex-direction:column;gap:5px;min-width:140px}
+.field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+input,select{background:var(--bg2);border:1px solid var(--line);color:var(--text);padding:9px 10px;border-radius:6px;font-size:13.5px;font-family:var(--sans)}
+input:focus,select:focus{outline:1px solid var(--brass)}
+input[type=number]{font-family:var(--mono)}
+button{cursor:pointer;font-family:var(--sans)}
+.btn{background:var(--brass);color:#1a1a1a;border:none;padding:9px 16px;border-radius:6px;font-size:13px;font-weight:700}
+.btn:hover{background:#d8b565}
+.btn.secondary{background:transparent;border:1px solid var(--brass-dim);color:var(--brass)}
+.btn.secondary:hover{background:rgba(201,162,75,.1)}
+.btn.danger{background:transparent;border:1px solid var(--red);color:var(--red)}
+.btn.danger:hover{background:rgba(193,68,60,.12)}
+.btn.small{padding:5px 10px;font-size:11.5px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--bg2);font-family:var(--mono);font-size:13px}
+tr:hover td{background:var(--card2)}
+.num{text-align:right}
+.neg{color:var(--red);font-weight:700}
+.pos{color:var(--green)}
+.muted{color:var(--muted2)}
+.empty{padding:24px;text-align:center;color:var(--muted2);font-size:13px}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-family:var(--sans)}
+.pill.rank1{background:rgba(201,162,75,.18);color:var(--brass)}
+.pill.rank-lo{background:rgba(193,68,60,.15);color:var(--red)}
+.worker-block{border:1px solid var(--line);border-radius:8px;margin-bottom:12px;overflow:hidden}
+.worker-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer;background:var(--card2)}
+.worker-head:hover{background:#2c333b}
+.worker-name{font-family:var(--serif);font-size:15px;font-weight:700}
+.worker-role{color:var(--muted);font-size:12px;font-family:var(--sans)}
+.worker-body{padding:16px;display:none;background:var(--bg2)}
+.worker-body.open{display:block}
+.net{font-family:var(--mono);font-size:18px;font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.actions{display:flex;gap:8px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--card);border:1px solid var(--brass-dim);border-radius:10px;padding:24px;width:300px}
+.modal h3{margin:0 0 12px;font-family:var(--serif);color:var(--brass)}
+.modal input{width:100%;margin-bottom:14px;text-align:center;font-size:18px;letter-spacing:4px}
+.modal .row{justify-content:flex-end}
+.lock-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 0;gap:14px}
+.lock-screen .lock-icon{font-size:40px}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+.stat .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.stat .value{font-family:var(--mono);font-size:22px;font-weight:700}
+footer.hint{font-size:11px;color:var(--muted2);margin-top:8px}
+::placeholder{color:var(--muted2)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="brand">Atelier Ledger<small>Stock &middot; Payroll &middot; Sales</small></div>
+    <div class="nav" id="nav">
+      <button class="nav-btn" data-tab="workers"><span class="idx">01</span> Workers &amp; Pay</button>
+      <button class="nav-btn" data-tab="stock"><span class="idx">02</span> Stock &amp; Purchases</button>
+      <button class="nav-btn" data-tab="sales"><span class="idx">03</span> Sales</button>
+      <button class="nav-btn" data-tab="admin"><span class="idx">04</span> Admin Report</button>
+    </div>
+  </div>
+  <div class="main" id="main"></div>
+</div>
+
+<script>
+/* ---------------- STORAGE ---------------- */
+let DB = null;
+const STORAGE_KEY = 'atelier-db-v1';
+const hasCloudStorage = typeof window.storage !== 'undefined' && window.storage !== null;
+
+function emptyDB(){
+  return {
+    seq:1, workers:[], advances:[], absences:[],
+    items:[], purchases:[], withdrawals:[],
+    saleItems:[], sales:[]
+  };
+}
+async function loadDB(){
+  try{
+    if(hasCloudStorage){
+      const r = await window.storage.get(STORAGE_KEY, false);
+      DB = r ? JSON.parse(r.value) : emptyDB();
+    } else {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      DB = raw ? JSON.parse(raw) : emptyDB();
+    }
+  }catch(e){ DB = emptyDB(); }
+}
+let saveTimer=null;
+function saveDB(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async ()=>{
+    try{
+      if(hasCloudStorage) await window.storage.set(STORAGE_KEY, JSON.stringify(DB), false);
+      else localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+    }
+    catch(e){ console.error('save failed', e); }
+  }, 150);
+}
+function uid(){ return DB.seq++; }
+
+/* ---------------- HELPERS ---------------- */
+function money(n){ n = Number(n)||0; return (n<0?'-':'') + 'DT ' + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function monthKey(dateStr){ return (dateStr||todayStr()).slice(0,7); }
+function monthLabel(mk){ const [y,m]=mk.split('-'); return new Date(y,m-1,1).toLocaleString(undefined,{month:'long',year:'numeric'}); }
+function hoursPerDayForMonth(mk){ const m = Number(mk.split('-')[1]); return (m===7||m===8) ? 6 : 8; } // Jul/Aug: 7h-13h, else 8h-16h
+const WORK_DAYS_PER_MONTH = 26;
+function thisMonthKey(){ return todayStr().slice(0,7); }
+
+function workerPayForMonth(workerId, mk){
+  const w = DB.workers.find(x=>x.id===workerId);
+  if(!w) return null;
+  const hpd = hoursPerDayForMonth(mk);
+  const dailyRate = w.monthlySalary / WORK_DAYS_PER_MONTH;
+  const hourlyRate = dailyRate / hpd;
+  const advances = DB.advances.filter(a=>a.workerId===workerId && monthKey(a.date)===mk);
+  const absences = DB.absences.filter(a=>a.workerId===workerId && monthKey(a.date)===mk);
+  const advTotal = advances.reduce((s,a)=>s+Number(a.amount),0);
+  let deduction = 0;
+  absences.forEach(a=>{
+    if(a.type==='day') deduction += dailyRate;
+    else deduction += hourlyRate * Number(a.hours||0);
+  });
+  const net = w.monthlySalary - advTotal - deduction;
+  const maxPossible = hpd * WORK_DAYS_PER_MONTH;
+  let missedHours = 0;
+  absences.forEach(a=>{ missedHours += a.type==='day' ? hpd : Number(a.hours||0); });
+  const performance = maxPossible>0 ? Math.max(0, ((maxPossible-missedHours)/maxPossible)*100) : 100;
+  return {worker:w, dailyRate, hourlyRate, advTotal, deduction, net, performance, advances, absences};
+}
+
+function itemAvgCost(itemId){
+  const p = DB.purchases.filter(x=>x.itemId===itemId);
+  const qty = p.reduce((s,x)=>s+Number(x.quantity),0);
+  const cost = p.reduce((s,x)=>s+Number(x.quantity)*Number(x.unitCost),0);
+  return qty>0 ? cost/qty : 0;
+}
+
+/* ---------------- PIN MODALS ---------------- */
+function askPin(title, expected){
+  return new Promise(resolve=>{
+    const bg=document.createElement('div');
+    bg.className='modal-bg';
+    bg.innerHTML=`<div class="modal">
+      <h3>${title}</h3>
+      <input type="password" maxlength="8" id="pinInput" placeholder="code" autofocus>
+      <div class="row">
+        <button class="btn secondary small" id="pinCancel">Cancel</button>
+        <button class="btn small" id="pinOk">Confirm</button>
+      </div>
+      <div id="pinErr" style="color:var(--red);font-size:12px;margin-top:8px;display:none">Wrong code</div>
+    </div>`;
+    document.body.appendChild(bg);
+    const input=bg.querySelector('#pinInput');
+    input.focus();
+    const cleanup=(val)=>{ document.body.removeChild(bg); resolve(val); };
+    bg.querySelector('#pinCancel').onclick=()=>cleanup(false);
+    bg.querySelector('#pinOk').onclick=()=>{
+      if(input.value===expected) cleanup(true);
+      else { bg.querySelector('#pinErr').style.display='block'; input.value=''; input.focus(); }
+    };
+    input.onkeydown=e=>{ if(e.key==='Enter') bg.querySelector('#pinOk').click(); };
+  });
+}
+
+/* ---------------- NAV ---------------- */
+let activeTab='workers';
+let adminUnlocked=false;
+document.getElementById('nav').addEventListener('click', e=>{
+  const btn=e.target.closest('.nav-btn'); if(!btn) return;
+  activeTab=btn.dataset.tab;
+  render();
+});
+
+function render(){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===activeTab));
+  const main=document.getElementById('main');
+  if(activeTab==='workers') main.innerHTML=renderWorkers();
+  else if(activeTab==='stock') main.innerHTML=renderStock();
+  else if(activeTab==='sales') main.innerHTML=renderSales();
+  else if(activeTab==='admin') main.innerHTML=renderAdmin();
+  bindEvents();
+}
+
+/* ================= WORKERS TAB ================= */
+let workersMonth = thisMonthKey();
+let openWorkerId = null;
+
+function renderWorkers(){
+  const hpd = hoursPerDayForMonth(workersMonth);
+  const rows = DB.workers.map(w=>workerPayForMonth(w.id, workersMonth));
+  const ranked = [...rows].sort((a,b)=>b.performance-a.performance);
+
+  return `
+  <h1>Workers &amp; Pay</h1>
+  <div class="subtitle">26 working days/month &middot; 8h&ndash;16h (8h/day) except July&ndash;August 7h&ndash;13h (6h/day). Currently viewing <b style="color:var(--brass)">${monthLabel(workersMonth)}</b> &mdash; ${hpd}h/day.</div>
+
+  <div class="card">
+    <h2>Add a worker</h2>
+    <form id="addWorkerForm" class="row">
+      <div class="field"><label>Name</label><input name="name" required></div>
+      <div class="field"><label>Role</label><input name="role" placeholder="e.g. Assembler"></div>
+      <div class="field"><label>Monthly salary (DT)</label><input name="salary" type="number" step="any" min="0" required></div>
+      <button class="btn" type="submit">Add worker</button>
+    </form>
+  </div>
+
+  <div class="toolbar">
+    <div class="field"><label>Payroll month</label><input type="month" id="monthPicker" value="${workersMonth}"></div>
+    <div class="actions">
+      <button class="btn secondary" id="btnPayrollPdf">Generate payroll PDF</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Workers this month (${rows.length})</h2>
+    ${rows.length===0?'<div class="empty">No workers yet. Add one above.</div>':''}
+    ${rows.map(r=>renderWorkerBlock(r, ranked)).join('')}
+  </div>
+  `;
+}
+
+function renderWorkerBlock(r, ranked){
+  const w=r.worker;
+  const isOpen = openWorkerId===w.id;
+  const rankPos = ranked.findIndex(x=>x.worker.id===w.id);
+  let pill='';
+  if(ranked.length>1 && rankPos===0) pill=`<span class="pill rank1">Top performer</span>`;
+  else if(ranked.length>1 && rankPos===ranked.length-1) pill=`<span class="pill rank-lo">Needs attention</span>`;
+  return `
+  <div class="worker-block">
+    <div class="worker-head" data-open="${w.id}">
+      <div>
+        <span class="worker-name">${esc(w.name)}</span>
+        <span class="worker-role"> &middot; ${esc(w.role||'—')}</span>
+        ${pill}
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="net ${r.net<0?'neg':'pos'}">${money(r.net)}</div>
+        <span class="muted" style="font-size:11px">${isOpen?'▲':'▼'}</span>
+      </div>
+    </div>
+    <div class="worker-body ${isOpen?'open':''}">
+      <div class="grid2">
+        <div>
+          <table>
+            <tr><td class="muted">Monthly salary</td><td class="num">${money(w.monthlySalary)}</td></tr>
+            <tr><td class="muted">Daily rate</td><td class="num">${money(r.dailyRate)}</td></tr>
+            <tr><td class="muted">Hourly rate</td><td class="num">${money(r.hourlyRate)}</td></tr>
+            <tr><td class="muted">Advances taken</td><td class="num neg">-${money(r.advTotal)}</td></tr>
+            <tr><td class="muted">Absence deductions</td><td class="num neg">-${money(r.deduction)}</td></tr>
+            <tr><td><b>Net pay</b></td><td class="num ${r.net<0?'neg':'pos'}"><b>${money(r.net)}</b></td></tr>
+            <tr><td class="muted">Performance</td><td class="num">${r.performance.toFixed(1)}%</td></tr>
+          </table>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn secondary small" data-edit-worker="${w.id}">Edit</button>
+            <button class="btn danger small" data-del-worker="${w.id}">Delete</button>
+          </div>
+        </div>
+        <div>
+          <form data-advance-form="${w.id}" class="row" style="margin-bottom:14px">
+            <div class="field"><label>Advance amount</label><input type="number" step="any" min="0" name="amount" required></div>
+            <div class="field"><label>Date</label><input type="date" name="date" value="${todayStr()}" required></div>
+            <button class="btn small" type="submit">Add advance</button>
+          </form>
+          <form data-absence-form="${w.id}" class="row">
+            <div class="field"><label>Type</label>
+              <select name="type" onchange="this.form.querySelector('[name=hours]').style.display=this.value==='hour'?'block':'none'">
+                <option value="day">Skipped day</option>
+                <option value="hour">Skipped hours</option>
+              </select>
+            </div>
+            <div class="field"><label>Hours (if partial)</label><input type="number" step="any" min="0" name="hours" style="display:none"></div>
+            <div class="field"><label>Date</label><input type="date" name="date" value="${todayStr()}" required></div>
+            <button class="btn small" type="submit">Log absence</button>
+          </form>
+          ${r.advances.length||r.absences.length ? `
+          <div style="margin-top:14px">
+            ${r.advances.map(a=>`<div class="muted" style="font-size:12px">Advance ${a.date}: ${money(a.amount)} <span data-del-advance="${a.id}" style="cursor:pointer;color:var(--red)">✕</span></div>`).join('')}
+            ${r.absences.map(a=>`<div class="muted" style="font-size:12px">Absence ${a.date}: ${a.type==='day'?'full day':a.hours+'h'} <span data-del-absence="${a.id}" style="cursor:pointer;color:var(--red)">✕</span></div>`).join('')}
+          </div>` : ''}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ================= STOCK TAB ================= */
+function renderStock(){
+  const items = DB.items;
+  return `
+  <h1>Stock &amp; Purchases</h1>
+  <div class="subtitle">Track items, suppliers, factures (TVA 19%), and what each worker withdraws from stock.</div>
+
+  <div class="card">
+    <h2>Item types</h2>
+    <form id="addItemForm" class="row">
+      <div class="field"><label>Name</label><input name="name" required placeholder="e.g. Wheels, Glue, Screws"></div>
+      <div class="field"><label>Unit</label><input name="unit" placeholder="pcs, kg, m..."></div>
+      <button class="btn" type="submit">Add item</button>
+    </form>
+    <table style="margin-top:14px">
+      <thead><tr><th>Item</th><th>Unit</th><th class="num">Avg cost</th><th></th></tr></thead>
+      <tbody>
+        ${items.length===0?'<tr><td colspan="4" class="empty">No items yet.</td></tr>':''}
+        ${items.map(it=>`<tr>
+          <td style="font-family:var(--sans)">${esc(it.name)}</td>
+          <td>${esc(it.unit||'-')}</td>
+          <td class="num">${money(itemAvgCost(it.id))}</td>
+          <td class="num"><button class="btn secondary small" data-edit-item="${it.id}">Edit</button>
+          <button class="btn danger small" data-del-item="${it.id}">Delete</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Record a purchase</h2>
+    ${items.length===0?'<div class="empty">Add an item first.</div>':`
+    <form id="addPurchaseForm" class="row">
+      <div class="field"><label>Item</label><select name="itemId" required>
+        <option value="">Select item</option>
+        ${items.map(it=>`<option value="${it.id}">${esc(it.name)}</option>`).join('')}
+      </select></div>
+      <div class="field"><label>Quantity</label><input type="number" step="any" min="0" name="quantity" required></div>
+      <div class="field"><label>Unit cost (DT)</label><input type="number" step="any" min="0" name="unitCost" required></div>
+      <div class="field"><label>Supplier</label><input name="supplier" required placeholder="Company name"></div>
+      <div class="field"><label>Matricule fiscal</label><input name="matricule" required placeholder="e.g. 1234567/A/B/C/000"></div>
+      <div class="field"><label>Date</label><input type="date" name="date" value="${todayStr()}" required></div>
+      <button class="btn" type="submit">Record purchase</button>
+    </form>`}
+  </div>
+
+  <div class="card">
+    <h2>Purchase history</h2>
+    <table>
+      <thead><tr><th>Date</th><th>Item</th><th class="num">Qty</th><th class="num">Unit cost</th><th class="num">Total</th><th>Supplier</th><th>Matricule fiscal</th></tr></thead>
+      <tbody>
+        ${DB.purchases.length===0?'<tr><td colspan="7" class="empty">No purchases yet.</td></tr>':''}
+        ${[...DB.purchases].sort((a,b)=>b.date.localeCompare(a.date)).map(p=>{
+          const it=DB.items.find(i=>i.id===p.itemId);
+          const total=Number(p.quantity)*Number(p.unitCost);
+          return `<tr>
+            <td>${p.date}</td><td style="font-family:var(--sans)">${esc(it?it.name:'—')}</td>
+            <td class="num">${p.quantity}</td><td class="num">${money(p.unitCost)}</td><td class="num">${money(total)}</td>
+            <td style="font-family:var(--sans)">${esc(p.supplier)}</td><td>${esc(p.matricule)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div class="actions" style="margin-top:14px">
+      <button class="btn secondary" id="btnItemSpendPdf">Item spend PDF</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Withdrawals (worker takes item from stock)</h2>
+    ${(items.length===0||DB.workers.length===0)?'<div class="empty">Add at least one item and one worker first.</div>':`
+    <form id="addWithdrawalForm" class="row">
+      <div class="field"><label>Worker</label><select name="workerId" required>
+        <option value="">Select worker</option>
+        ${DB.workers.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('')}
+      </select></div>
+      <div class="field"><label>Item</label><select name="itemId" required>
+        <option value="">Select item</option>
+        ${items.map(it=>`<option value="${it.id}">${esc(it.name)}</option>`).join('')}
+      </select></div>
+      <div class="field"><label>Quantity</label><input type="number" step="any" min="0" name="quantity" required></div>
+      <div class="field"><label>Date</label><input type="date" name="date" value="${todayStr()}" required></div>
+      <button class="btn" type="submit">Log withdrawal</button>
+    </form>`}
+    <table style="margin-top:14px">
+      <thead><tr><th>Date</th><th>Worker</th><th>Item</th><th class="num">Qty</th><th class="num">Cost</th></tr></thead>
+      <tbody>
+        ${DB.withdrawals.length===0?'<tr><td colspan="5" class="empty">No withdrawals yet.</td></tr>':''}
+        ${[...DB.withdrawals].sort((a,b)=>b.date.localeCompare(a.date)).map(wd=>{
+          const w=DB.workers.find(x=>x.id===wd.workerId), it=DB.items.find(x=>x.id===wd.itemId);
+          const cost = Number(wd.quantity)*itemAvgCost(wd.itemId);
+          return `<tr><td>${wd.date}</td><td style="font-family:var(--sans)">${esc(w?w.name:'—')}</td>
+          <td style="font-family:var(--sans)">${esc(it?it.name:'—')}</td><td class="num">${wd.quantity}</td><td class="num">${money(cost)}</td></tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div class="actions" style="margin-top:14px">
+      <button class="btn secondary" id="btnWorkerItemCostPdf">Worker item-cost PDF</button>
+    </div>
+  </div>
+  `;
+}
+
+/* ================= SALES TAB ================= */
+let factureLines = [];
+let fState = { clientName:'', clientAddress:'', clientMF:'', date:todayStr(), remise:0 };
+const COMPANY = {
+  name: 'SMT DU SAHEL',
+  activity: 'Construction Métallique',
+  mf: '1854001F/A/M/000',
+  rc: '0936342024',
+  gsm: '93280599'
+};
+function renderSales(){
+  return `
+  <h1>Sales</h1>
+  <div class="subtitle">Products you sell, and every sale logged.</div>
+
+  <div class="card">
+    <h2>Sellable items</h2>
+    <form id="addSaleItemForm" class="row">
+      <div class="field"><label>Name</label><input name="name" required></div>
+      <div class="field"><label>Price (DT)</label><input type="number" step="any" min="0" name="price" required></div>
+      <button class="btn" type="submit">Add item</button>
+    </form>
+    <table style="margin-top:14px">
+      <thead><tr><th>Item</th><th class="num">Price</th><th></th></tr></thead>
+      <tbody>
+        ${DB.saleItems.length===0?'<tr><td colspan="3" class="empty">No sellable items yet.</td></tr>':''}
+        ${DB.saleItems.map(si=>`<tr>
+          <td style="font-family:var(--sans)">${esc(si.name)}</td><td class="num">${money(si.price)}</td>
+          <td class="num"><button class="btn secondary small" data-edit-saleitem="${si.id}">Edit</button>
+          <button class="btn danger small" data-del-saleitem="${si.id}">Delete</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Record a sale</h2>
+    ${DB.saleItems.length===0?'<div class="empty">Add a sellable item first.</div>':`
+    <form id="addSaleForm" class="row">
+      <div class="field"><label>Item</label><select name="saleItemId" required id="saleItemSelect">
+        <option value="">Select item</option>
+        ${DB.saleItems.map(si=>`<option value="${si.id}" data-price="${si.price}">${esc(si.name)}</option>`).join('')}
+      </select></div>
+      <div class="field"><label>Quantity</label><input type="number" step="any" min="0" name="quantity" value="1" required></div>
+      <div class="field"><label>Price each (DT)</label><input type="number" step="any" min="0" name="price" id="salePriceInput" required></div>
+      <div class="field"><label>Date</label><input type="date" name="date" value="${todayStr()}" required></div>
+      <button class="btn" type="submit">Record sale</button>
+    </form>`}
+  </div>
+
+  <div class="card">
+    <h2>Create a facture (invoice)</h2>
+    ${DB.saleItems.length===0?'<div class="empty">Add a sellable item first.</div>':`
+    <div class="grid2" style="margin-bottom:16px">
+      <div class="row">
+        <div class="field" style="min-width:220px"><label>Client name</label><input id="fClientName" placeholder="Client name" value="${esc(fState.clientName)}"></div>
+        <div class="field" style="min-width:220px"><label>Client address</label><input id="fClientAddress" placeholder="Client address" value="${esc(fState.clientAddress)}"></div>
+        <div class="field"><label>Client matricule fiscal</label><input id="fClientMF" placeholder="MF" value="${esc(fState.clientMF)}"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Invoice date</label><input type="date" id="fDate" value="${fState.date}"></div>
+        <div class="field"><label>Remise (DT)</label><input type="number" step="any" min="0" id="fRemise" value="${fState.remise}"></div>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <div class="field"><label>Item</label><select id="fItemSelect">
+        ${DB.saleItems.map(si=>`<option value="${si.id}" data-price="${si.price}">${esc(si.name)}</option>`).join('')}
+      </select></div>
+      <div class="field"><label>Quantity</label><input type="number" step="any" min="0" id="fQty" value="1"></div>
+      <div class="field"><label>Price each (DT)</label><input type="number" step="any" min="0" id="fPrice" value="${DB.saleItems[0]?.price||0}"></div>
+      <button class="btn secondary" id="btnAddFactureLine" type="button">Add line</button>
+    </div>
+    <table>
+      <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Total</th><th></th></tr></thead>
+      <tbody id="factureLinesBody">
+        ${factureLines.length===0?'<tr><td colspan="5" class="empty">No lines added yet.</td></tr>':''}
+        ${factureLines.map((l,i)=>`<tr>
+          <td style="font-family:var(--sans)">${esc(l.name)}</td><td class="num">${l.qty}</td><td class="num">${money(l.price)}</td><td class="num">${money(l.qty*l.price)}</td>
+          <td class="num"><span data-del-fline="${i}" style="cursor:pointer;color:var(--red)">✕</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="row" style="margin-top:14px;justify-content:space-between">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)"><input type="checkbox" id="fLogSales" checked> Also log these as sales</label>
+      <button class="btn" id="btnGenerateFacture" type="button">Generate facture PDF</button>
+    </div>
+    `}
+  </div>
+
+  <div class="card">
+    <h2>Sales history</h2>
+    <table>
+      <thead><tr><th>Date</th><th>Item</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Revenue</th></tr></thead>
+      <tbody>
+        ${DB.sales.length===0?'<tr><td colspan="5" class="empty">No sales yet.</td></tr>':''}
+        ${[...DB.sales].sort((a,b)=>b.date.localeCompare(a.date)).map(s=>{
+          const si=DB.saleItems.find(x=>x.id===s.saleItemId);
+          const rev=Number(s.quantity)*Number(s.price);
+          return `<tr><td>${s.date}</td><td style="font-family:var(--sans)">${esc(si?si.name:'—')}</td>
+          <td class="num">${s.quantity}</td><td class="num">${money(s.price)}</td><td class="num">${money(rev)}</td></tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div class="actions" style="margin-top:14px">
+      <button class="btn secondary" id="btnSalesPdf">Sales PDF</button>
+      <button class="btn danger" id="btnResetSales">Reset Sales History</button>
+    </div>
+  </div>
+  `;
+}
+
+/* ================= ADMIN TAB ================= */
+let adminFrom=null, adminTo=null;
+function renderAdmin(){
+  if(!adminUnlocked){
+    return `<h1>Admin Report</h1><div class="subtitle">Full business overview — protected.</div>
+    <div class="card lock-screen">
+      <div class="lock-icon">🔒</div>
+      <div class="muted">Enter the admin code to view the full report.</div>
+      <button class="btn" id="btnUnlockAdmin">Enter code</button>
+    </div>`;
+  }
+  const today = new Date();
+  if(!adminFrom) adminFrom = today.toISOString().slice(0,8)+'01';
+  if(!adminTo) adminTo = todayStr();
+
+  const monthsInRange = countMonths(adminFrom, adminTo);
+  let laborCost = 0;
+  DB.workers.forEach(w=>{
+    const adv = DB.advances.filter(a=>a.workerId===w.id && a.date>=adminFrom && a.date<=adminTo).reduce((s,a)=>s+Number(a.amount),0);
+    let ded = 0;
+    DB.absences.filter(a=>a.workerId===w.id && a.date>=adminFrom && a.date<=adminTo).forEach(a=>{
+      const mk = monthKey(a.date); const hpd = hoursPerDayForMonth(mk);
+      const dailyRate = w.monthlySalary/WORK_DAYS_PER_MONTH, hourlyRate=dailyRate/hpd;
+      ded += a.type==='day' ? dailyRate : hourlyRate*Number(a.hours||0);
+    });
+    laborCost += (w.monthlySalary*monthsInRange) - adv - ded;
+  });
+  const purchasesInRange = DB.purchases.filter(p=>p.date>=adminFrom && p.date<=adminTo);
+  const stockCost = purchasesInRange.reduce((s,p)=>s+Number(p.quantity)*Number(p.unitCost),0);
+  const salesInRange = DB.sales.filter(s=>s.date>=adminFrom && s.date<=adminTo);
+  const revenue = salesInRange.reduce((s,x)=>s+Number(x.quantity)*Number(x.price),0);
+  const profit = revenue - laborCost - stockCost;
+
+  return `
+  <h1>Admin Report</h1>
+  <div class="subtitle">Unlocked — full visibility into labor, stock and sales.</div>
+
+  <div class="card">
+    <h2>Report period</h2>
+    <div class="row">
+      <div class="field"><label>From</label><input type="date" id="adminFrom" value="${adminFrom}"></div>
+      <div class="field"><label>To</label><input type="date" id="adminTo" value="${adminTo}"></div>
+      <button class="btn secondary" id="btnAdminApply">Apply</button>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="stat"><div class="label">Labor cost</div><div class="value">${money(laborCost)}</div></div>
+    <div class="stat"><div class="label">Stock purchases</div><div class="value">${money(stockCost)}</div></div>
+    <div class="stat"><div class="label">Sales revenue</div><div class="value">${money(revenue)}</div></div>
+    <div class="stat"><div class="label">Net profit</div><div class="value ${profit<0?'neg':'pos'}">${money(profit)}</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Workers ranked by performance (current month)</h2>
+    <table>
+      <thead><tr><th>#</th><th>Worker</th><th class="num">Net pay</th><th class="num">Performance</th></tr></thead>
+      <tbody>
+      ${[...DB.workers].map(w=>workerPayForMonth(w.id, thisMonthKey())).sort((a,b)=>b.performance-a.performance).map((r,i)=>`
+        <tr><td>${i+1}</td><td style="font-family:var(--sans)">${esc(r.worker.name)}</td>
+        <td class="num ${r.net<0?'neg':''}">${money(r.net)}</td><td class="num">${r.performance.toFixed(1)}%</td></tr>
+      `).join('') || '<tr><td colspan="4" class="empty">No workers yet.</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="actions">
+    <button class="btn" id="btnFullReportPdf">Generate full report PDF</button>
+    <button class="btn secondary" id="btnLockAdmin">Lock</button>
+  </div>
+  `;
+}
+function countMonths(from,to){
+  const a=new Date(from), b=new Date(to);
+  return Math.max(1,(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth())+1);
+}
+
+/* ================= EVENTS ================= */
+function bindEvents(){
+  // WORKERS
+  const addWorkerForm=document.getElementById('addWorkerForm');
+  if(addWorkerForm) addWorkerForm.onsubmit=e=>{
+    e.preventDefault(); const f=new FormData(e.target);
+    DB.workers.push({id:uid(), name:f.get('name').trim(), role:f.get('role').trim(), monthlySalary:Number(f.get('salary'))});
+    saveDB(); render();
+  };
+  const monthPicker=document.getElementById('monthPicker');
+  if(monthPicker) monthPicker.onchange=e=>{ workersMonth=e.target.value; render(); };
+  document.querySelectorAll('[data-open]').forEach(el=>{
+    el.onclick=()=>{ const id=Number(el.dataset.open); openWorkerId = openWorkerId===id?null:id; render(); };
+  });
+  document.querySelectorAll('[data-advance-form]').forEach(f=>{
+    f.onsubmit=e=>{ e.preventDefault(); const wid=Number(f.dataset.advanceForm); const fd=new FormData(f);
+      DB.advances.push({id:uid(), workerId:wid, amount:Number(fd.get('amount')), date:fd.get('date')});
+      saveDB(); render(); };
+  });
+  document.querySelectorAll('[data-absence-form]').forEach(f=>{
+    f.onsubmit=e=>{ e.preventDefault(); const wid=Number(f.dataset.absenceForm); const fd=new FormData(f);
+      DB.absences.push({id:uid(), workerId:wid, type:fd.get('type'), hours:Number(fd.get('hours')||0), date:fd.get('date')});
+      saveDB(); render(); };
+  });
+  document.querySelectorAll('[data-del-advance]').forEach(el=>el.onclick=()=>{ DB.advances=DB.advances.filter(a=>a.id!==Number(el.dataset.delAdvance)); saveDB(); render(); });
+  document.querySelectorAll('[data-del-absence]').forEach(el=>el.onclick=()=>{ DB.absences=DB.absences.filter(a=>a.id!==Number(el.dataset.delAbsence)); saveDB(); render(); });
+  document.querySelectorAll('[data-edit-worker]').forEach(el=>el.onclick=async ()=>{
+    if(!await askPin('Code to edit worker','0000')) return;
+    const w=DB.workers.find(x=>x.id===Number(el.dataset.editWorker));
+    const name=prompt('Name', w.name); if(name===null) return;
+    const role=prompt('Role', w.role); if(role===null) return;
+    const salary=prompt('Monthly salary', w.monthlySalary); if(salary===null) return;
+    w.name=name.trim(); w.role=role.trim(); w.monthlySalary=Number(salary);
+    saveDB(); render();
+  });
+  document.querySelectorAll('[data-del-worker]').forEach(el=>el.onclick=async ()=>{
+    if(!await askPin('Code to delete worker','0000')) return;
+    const id=Number(el.dataset.delWorker);
+    DB.workers=DB.workers.filter(w=>w.id!==id);
+    DB.advances=DB.advances.filter(a=>a.workerId!==id);
+    DB.absences=DB.absences.filter(a=>a.workerId!==id);
+    DB.withdrawals=DB.withdrawals.filter(a=>a.workerId!==id);
+    saveDB(); render();
+  });
+  const btnPayrollPdf=document.getElementById('btnPayrollPdf');
+  if(btnPayrollPdf) btnPayrollPdf.onclick=()=>generatePayrollPdf();
+
+  // STOCK
+  const addItemForm=document.getElementById('addItemForm');
+  if(addItemForm) addItemForm.onsubmit=e=>{ e.preventDefault(); const f=new FormData(e.target);
+    DB.items.push({id:uid(), name:f.get('name').trim(), unit:f.get('unit').trim()}); saveDB(); render(); };
+  document.querySelectorAll('[data-edit-item]').forEach(el=>el.onclick=async ()=>{
+    if(!await askPin('Code to edit item','0000')) return;
+    const it=DB.items.find(x=>x.id===Number(el.dataset.editItem));
+    const name=prompt('Name', it.name); if(name===null) return;
+    const unit=prompt('Unit', it.unit); if(unit===null) return;
+    it.name=name.trim(); it.unit=unit.trim(); saveDB(); render();
+  });
+  document.querySelectorAll('[data-del-item]').forEach(el=>el.onclick=async ()=>{
+    if(!await askPin('Code to delete item','0000')) return;
+    const id=Number(el.dataset.delItem);
+    DB.items=DB.items.filter(x=>x.id!==id);
+    DB.purchases=DB.purchases.filter(x=>x.itemId!==id);
+    DB.withdrawals=DB.withdrawals.filter(x=>x.itemId!==id);
+    saveDB(); render();
+  });
+  const addPurchaseForm=document.getElementById('addPurchaseForm');
+  if(addPurchaseForm) addPurchaseForm.onsubmit=e=>{ e.preventDefault(); const f=new FormData(e.target);
+    DB.purchases.push({id:uid(), itemId:Number(f.get('itemId')), quantity:Number(f.get('quantity')), unitCost:Number(f.get('unitCost')),
+      supplier:f.get('supplier').trim(), matricule:f.get('matricule').trim(), date:f.get('date')});
+    saveDB(); render(); };
+  const btnItemSpendPdf=document.getElementById('btnItemSpendPdf');
+  if(btnItemSpendPdf) btnItemSpendPdf.onclick=()=>generateItemSpendPdf();
+  const addWithdrawalForm=document.getElementById('addWithdrawalForm');
+  if(addWithdrawalForm) addWithdrawalForm.onsubmit=e=>{ e.preventDefault(); const f=new FormData(e.target);
+    DB.withdrawals.push({id:uid(), workerId:Number(f.get('workerId')), itemId:Number(f.get('itemId')), quantity:Number(f.get('quantity')), date:f.get('date')});
+    saveDB(); render(); };
+  const btnWorkerItemCostPdf=document.getElementById('btnWorkerItemCostPdf');
+  if(btnWorkerItemCostPdf) btnWorkerItemCostPdf.onclick=()=>generateWorkerItemCostPdf();
+
+  // SALES
+  const addSaleItemForm=document.getElementById('addSaleItemForm');
+  if(addSaleItemForm) addSaleItemForm.onsubmit=e=>{ e.preventDefault(); const f=new FormData(e.target);
+    DB.saleItems.push({id:uid(), name:f.get('name').trim(), price:Number(f.get('price'))}); saveDB(); render(); };
+  document.querySelectorAll('[data-edit-saleitem]').forEach(el=>el.onclick=async ()=>{
+    if(!await askPin('Code to edit item','0000')) return;
+    const si=DB.saleItems.find(x=>x.id===Number(el.dataset.editSaleitem));
+    const name=prompt('Name', si.name); if(name===null) return;
+    const price=prompt('Price', si.price); if(price===null) return;
+    si.name=name.trim(); si.price=Number(price); saveDB(); render();
+  });
+  document.querySelectorAll('[data-del-saleitem]').forEach(el=>el.onclick=async ()=>{
+    if(!await askPin('Code to delete item','0000')) return;
+    const id=Number(el.dataset.delSaleitem);
+    DB.saleItems=DB.saleItems.filter(x=>x.id!==id);
+    DB.sales=DB.sales.filter(x=>x.saleItemId!==id);
+    saveDB(); render();
+  });
+  const saleItemSelect=document.getElementById('saleItemSelect');
+  if(saleItemSelect) saleItemSelect.onchange=()=>{
+    const opt=saleItemSelect.selectedOptions[0];
+    document.getElementById('salePriceInput').value = opt?.dataset.price || '';
+  };
+  const addSaleForm=document.getElementById('addSaleForm');
+  if(addSaleForm) addSaleForm.onsubmit=e=>{ e.preventDefault(); const f=new FormData(e.target);
+    DB.sales.push({id:uid(), saleItemId:Number(f.get('saleItemId')), quantity:Number(f.get('quantity')), price:Number(f.get('price')), date:f.get('date')});
+    saveDB(); render(); };
+  const btnSalesPdf=document.getElementById('btnSalesPdf');
+  if(btnSalesPdf) btnSalesPdf.onclick=()=>generateSalesPdf();
+  const btnResetSales=document.getElementById('btnResetSales');
+  if(btnResetSales) btnResetSales.onclick=async ()=>{
+    if(!await askPin('Code to reset sales history','0000')) return;
+    if(!confirm('Delete all sales history?')) return;
+    DB.sales=[];
+    saveDB();
+    render();
+  };
+
+  const fItemSelect=document.getElementById('fItemSelect');
+  if(fItemSelect) fItemSelect.onchange=()=>{
+    const opt=fItemSelect.selectedOptions[0];
+    document.getElementById('fPrice').value = opt?.dataset.price || '';
+  };
+  const fClientName=document.getElementById('fClientName');
+  if(fClientName) fClientName.oninput=()=>{ fState.clientName=fClientName.value; };
+  const fClientAddress=document.getElementById('fClientAddress');
+  if(fClientAddress) fClientAddress.oninput=()=>{ fState.clientAddress=fClientAddress.value; };
+  const fClientMF=document.getElementById('fClientMF');
+  if(fClientMF) fClientMF.oninput=()=>{ fState.clientMF=fClientMF.value; };
+  const fDate=document.getElementById('fDate');
+  if(fDate) fDate.oninput=()=>{ fState.date=fDate.value; };
+  const fRemise=document.getElementById('fRemise');
+  if(fRemise) fRemise.oninput=()=>{ fState.remise=Number(fRemise.value)||0; };
+  const btnAddFactureLine=document.getElementById('btnAddFactureLine');
+  if(btnAddFactureLine) btnAddFactureLine.onclick=()=>{
+    const sel=document.getElementById('fItemSelect');
+    const opt=sel.selectedOptions[0]; if(!opt) return;
+    const qty=Number(document.getElementById('fQty').value)||0;
+    const price=Number(document.getElementById('fPrice').value)||0;
+    if(qty<=0) return;
+    factureLines.push({saleItemId:Number(opt.value), name:opt.textContent, qty, price});
+    render();
+  };
+  document.querySelectorAll('[data-del-fline]').forEach(el=>el.onclick=()=>{
+    factureLines.splice(Number(el.dataset.delFline),1); render();
+  });
+  const btnGenerateFacture=document.getElementById('btnGenerateFacture');
+  if(btnGenerateFacture) btnGenerateFacture.onclick=()=>{
+    if(factureLines.length===0){ alert('Add at least one line first.'); return; }
+    const client = {
+      name: fState.clientName.trim() || '—',
+      address: fState.clientAddress.trim() || '—',
+      mf: fState.clientMF.trim() || '—'
+    };
+    const date = fState.date || todayStr();
+    const remise = Number(fState.remise)||0;
+    const logSales = document.getElementById('fLogSales').checked;
+    generateSaleFacturePdf(client, date, remise, factureLines);
+    if(logSales){
+      factureLines.forEach(l=>{
+        DB.sales.push({id:uid(), saleItemId:l.saleItemId, quantity:l.qty, price:l.price, date});
+      });
+      saveDB();
+    }
+    factureLines = [];
+    fState = { clientName:'', clientAddress:'', clientMF:'', date:todayStr(), remise:0 };
+    render();
+  };
+
+  // ADMIN
+  const btnUnlockAdmin=document.getElementById('btnUnlockAdmin');
+  if(btnUnlockAdmin) btnUnlockAdmin.onclick=async ()=>{
+    if(await askPin('Admin code','5555')){ adminUnlocked=true; render(); }
+  };
+  const btnLockAdmin=document.getElementById('btnLockAdmin');
+  if(btnLockAdmin) btnLockAdmin.onclick=()=>{ adminUnlocked=false; render(); };
+  const btnAdminApply=document.getElementById('btnAdminApply');
+  if(btnAdminApply) btnAdminApply.onclick=()=>{
+    adminFrom=document.getElementById('adminFrom').value;
+    adminTo=document.getElementById('adminTo').value;
+    render();
+  };
+  const btnFullReportPdf=document.getElementById('btnFullReportPdf');
+  if(btnFullReportPdf) btnFullReportPdf.onclick=()=>generateFullReportPdf();
+}
+
+/* ================= PDF GENERATORS ================= */
+function newDoc(){ const {jsPDF}=window.jspdf; return new jsPDF(); }
+function pdfHeader(doc, title, subtitle){
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text(title, 14, 18);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(100);
+  doc.text(subtitle, 14, 25);
+  doc.setTextColor(0);
+}
+
+function generatePayrollPdf(){
+  const doc=newDoc();
+  pdfHeader(doc, 'Payroll Report', `${monthLabel(workersMonth)} — generated ${todayStr()}`);
+  const rows = DB.workers.map(w=>workerPayForMonth(w.id, workersMonth)).sort((a,b)=>b.performance-a.performance);
+  doc.autoTable({
+    startY: 32,
+    head:[['#','Worker','Salary','Advances','Deductions','Net Pay','Performance']],
+    body: rows.map((r,i)=>[i+1, r.worker.name, money(r.worker.monthlySalary), money(r.advTotal), money(r.deduction), money(r.net), r.performance.toFixed(1)+'%']),
+    styles:{fontSize:9}, headStyles:{fillColor:[201,162,75]}
+  });
+  const total = rows.reduce((s,r)=>s+r.net,0);
+  const y = doc.lastAutoTable.finalY + 10;
+  doc.setFont('helvetica','bold'); doc.text(`Total payroll: ${money(total)}`, 14, y);
+  if(rows.length) doc.text(`Best performer: ${rows[0].worker.name} (${rows[0].performance.toFixed(1)}%)`, 14, y+8);
+  doc.save(`payroll-${workersMonth}.pdf`);
+}
+
+function generateSaleFacturePdf(client, date, remise, lines){
+  const doc=newDoc();
+  const invoiceNo = 'F' + Date.now().toString().slice(-8);
+
+  // company header
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.text(COMPANY.name, 14, 18);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text(COMPANY.activity, 14, 24);
+  doc.text(`MF: ${COMPANY.mf}`, 14, 29);
+  doc.text(`RC: ${COMPANY.rc}`, 14, 34);
+  doc.text(`GSM: ${COMPANY.gsm}`, 14, 39);
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('FACTURE', 196, 18, {align:'right'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text(`N°: ${invoiceNo}`, 196, 25, {align:'right'});
+  doc.text(`Date: ${date}`, 196, 30, {align:'right'});
+
+  doc.setDrawColor(200); doc.line(14, 44, 196, 44);
+
+  // client block
+  doc.setFont('helvetica','bold'); doc.text('Client', 14, 52);
+  doc.setFont('helvetica','normal');
+  doc.text(`Nom: ${client.name}`, 14, 58);
+  doc.text(`Adresse: ${client.address}`, 14, 63);
+  doc.text(`Matricule fiscal: ${client.mf}`, 14, 68);
+
+  const ht = lines.reduce((s,l)=>s+l.qty*l.price,0);
+  doc.autoTable({
+    startY: 76,
+    head:[['Désignation','Quantité','Prix unitaire','Total HT']],
+    body: lines.map(l=>[l.name, l.qty, money(l.price), money(l.qty*l.price)]),
+    styles:{fontSize:10}, headStyles:{fillColor:[201,162,75]}
+  });
+
+  const netHT = Math.max(0, ht - remise);
+  const fodec = netHT*0.01;
+  const baseTva = netHT+fodec;
+  const tva = baseTva*0.19;
+  const timbre = 1;
+  const ttc = baseTva+tva+timbre;
+
+  let y = doc.lastAutoTable.finalY + 8;
+  const line=(label,val,bold=false)=>{
+    doc.setFont('helvetica', bold?'bold':'normal');
+    doc.text(label, 140, y); doc.text(val, 190, y, {align:'right'}); y+=6;
+  };
+  line('Total HT:', money(ht));
+  if(remise>0) line('Remise:', '-'+money(remise));
+  line('FODEC (1%):', money(fodec));
+  line('TVA (19%):', money(tva));
+  line('Timbre fiscal:', money(timbre));
+  doc.setDrawColor(180); doc.line(140, y-2, 190, y-2);
+  line('Total TTC:', money(ttc), true);
+
+  // cachet et signature
+  y += 20;
+  if(y>260){ doc.addPage(); y=40; }
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text('Cachet et signature', 150, y);
+  doc.rect(140, y+4, 50, 28);
+
+  doc.save(`facture-${invoiceNo}.pdf`);
+}
+
+function generateItemSpendPdf(){
+  const doc=newDoc();
+  pdfHeader(doc, 'Stock Spend by Item', `generated ${todayStr()}`);
+  const rows = DB.items.map(it=>{
+    const p = DB.purchases.filter(x=>x.itemId===it.id);
+    const qty = p.reduce((s,x)=>s+Number(x.quantity),0);
+    const cost = p.reduce((s,x)=>s+Number(x.quantity)*Number(x.unitCost),0);
+    return [it.name, it.unit||'-', qty, money(cost)];
+  });
+  doc.autoTable({ startY:32, head:[['Item','Unit','Qty purchased','Total spent']], body:rows, styles:{fontSize:9}, headStyles:{fillColor:[201,162,75]} });
+  const total = DB.purchases.reduce((s,p)=>s+Number(p.quantity)*Number(p.unitCost),0);
+  doc.setFont('helvetica','bold');
+  doc.text(`Total spent on stock: ${money(total)}`, 14, doc.lastAutoTable.finalY+10);
+  doc.save('item-spend.pdf');
+}
+
+function generateWorkerItemCostPdf(){
+  const doc=newDoc();
+  pdfHeader(doc, 'Worker Item Cost Report', `generated ${todayStr()}`);
+  const rows = DB.workers.map(w=>{
+    const wd = DB.withdrawals.filter(x=>x.workerId===w.id);
+    const cost = wd.reduce((s,x)=>s+Number(x.quantity)*itemAvgCost(x.itemId),0);
+    return [w.name, wd.length, money(cost)];
+  });
+  doc.autoTable({ startY:32, head:[['Worker','Withdrawals','Total item cost']], body:rows, styles:{fontSize:9}, headStyles:{fillColor:[201,162,75]} });
+  doc.save('worker-item-cost.pdf');
+}
+
+function generateSalesPdf(){
+  const doc=newDoc();
+  pdfHeader(doc, 'Sales Report', `generated ${todayStr()}`);
+  const rows = [...DB.sales].sort((a,b)=>a.date.localeCompare(b.date)).map(s=>{
+    const si=DB.saleItems.find(x=>x.id===s.saleItemId);
+    return [s.date, si?si.name:'—', s.quantity, money(s.price), money(Number(s.quantity)*Number(s.price))];
+  });
+  doc.autoTable({ startY:32, head:[['Date','Item','Qty','Price','Revenue']], body:rows, styles:{fontSize:9}, headStyles:{fillColor:[201,162,75]} });
+  const totalQty = DB.sales.reduce((s,x)=>s+Number(x.quantity),0);
+  const totalRev = DB.sales.reduce((s,x)=>s+Number(x.quantity)*Number(x.price),0);
+  const y=doc.lastAutoTable.finalY+10;
+  doc.setFont('helvetica','bold');
+  doc.text(`Total sold: ${totalQty}`, 14, y);
+  doc.text(`Total revenue: ${money(totalRev)}`, 14, y+8);
+  doc.save('sales-report.pdf');
+}
+
+function generateFullReportPdf(){
+  const doc=newDoc();
+  pdfHeader(doc, 'Full Business Report', `${adminFrom} to ${adminTo}`);
+  const monthsInRange = countMonths(adminFrom, adminTo);
+
+  let y=32;
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Labor', 14, y); y+=4;
+  const workerRows = DB.workers.map(w=>{
+    const adv = DB.advances.filter(a=>a.workerId===w.id && a.date>=adminFrom && a.date<=adminTo).reduce((s,a)=>s+Number(a.amount),0);
+    let ded=0;
+    DB.absences.filter(a=>a.workerId===w.id && a.date>=adminFrom && a.date<=adminTo).forEach(a=>{
+      const mk=monthKey(a.date), hpd=hoursPerDayForMonth(mk);
+      const dailyRate=w.monthlySalary/WORK_DAYS_PER_MONTH, hourlyRate=dailyRate/hpd;
+      ded += a.type==='day'?dailyRate:hourlyRate*Number(a.hours||0);
+    });
+    const net=(w.monthlySalary*monthsInRange)-adv-ded;
+    return [w.name, money(w.monthlySalary*monthsInRange), money(adv), money(ded), money(net)];
+  });
+  doc.autoTable({ startY:y, head:[['Worker','Base pay','Advances','Deductions','Net']], body:workerRows, styles:{fontSize:8}, headStyles:{fillColor:[201,162,75]} });
+  y = doc.lastAutoTable.finalY+10;
+  const laborCost = workerRows.reduce((s,r,i)=>{
+    const w=DB.workers[i];
+    const adv = DB.advances.filter(a=>a.workerId===w.id && a.date>=adminFrom && a.date<=adminTo).reduce((s2,a)=>s2+Number(a.amount),0);
+    let ded=0;
+    DB.absences.filter(a=>a.workerId===w.id && a.date>=adminFrom && a.date<=adminTo).forEach(a=>{
+      const mk=monthKey(a.date), hpd=hoursPerDayForMonth(mk);
+      const dailyRate=w.monthlySalary/WORK_DAYS_PER_MONTH, hourlyRate=dailyRate/hpd;
+      ded += a.type==='day'?dailyRate:hourlyRate*Number(a.hours||0);
+    });
+    return s + (w.monthlySalary*monthsInRange)-adv-ded;
+  },0);
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Stock purchases', 14, y); y+=4;
+  const purchasesInRange = DB.purchases.filter(p=>p.date>=adminFrom && p.date<=adminTo);
+  doc.autoTable({ startY:y, head:[['Date','Item','Supplier','Total']],
+    body:purchasesInRange.map(p=>{ const it=DB.items.find(x=>x.id===p.itemId); return [p.date, it?it.name:'—', p.supplier, money(Number(p.quantity)*Number(p.unitCost))]; }),
+    styles:{fontSize:8}, headStyles:{fillColor:[201,162,75]} });
+  y = doc.lastAutoTable.finalY+10;
+  const stockCost = purchasesInRange.reduce((s,p)=>s+Number(p.quantity)*Number(p.unitCost),0);
+
+  if(y>250){ doc.addPage(); y=20; }
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Sales', 14, y); y+=4;
+  const salesInRange = DB.sales.filter(s=>s.date>=adminFrom && s.date<=adminTo);
+  doc.autoTable({ startY:y, head:[['Date','Item','Qty','Revenue']],
+    body:salesInRange.map(s=>{ const si=DB.saleItems.find(x=>x.id===s.saleItemId); return [s.date, si?si.name:'—', s.quantity, money(Number(s.quantity)*Number(s.price))]; }),
+    styles:{fontSize:8}, headStyles:{fillColor:[201,162,75]} });
+  y = doc.lastAutoTable.finalY+12;
+  const revenue = salesInRange.reduce((s,x)=>s+Number(x.quantity)*Number(x.price),0);
+  const profit = revenue-laborCost-stockCost;
+
+  if(y>250){ doc.addPage(); y=20; }
+  doc.setFontSize(12);
+  doc.text(`Total labor cost: ${money(laborCost)}`, 14, y);
+  doc.text(`Total stock purchases: ${money(stockCost)}`, 14, y+8);
+  doc.text(`Total sales revenue: ${money(revenue)}`, 14, y+16);
+  doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  doc.setTextColor(profit<0?200:0, profit<0?0:120, 0);
+  doc.text(`NET PROFIT: ${money(profit)}`, 14, y+28);
+  doc.save(`full-report-${adminFrom}-to-${adminTo}.pdf`);
+}
+
+/* ---------------- INIT ---------------- */
+(async function init(){
+  await loadDB();
+  render();
+})();
+</script>
+</body>
+</html>
