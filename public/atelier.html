@@ -845,6 +845,49 @@ function bindEvents(){
     render();
   };
 
+  // COMMANDES
+  const addCommandeForm=document.getElementById('addCommandeForm');
+  if(addCommandeForm) addCommandeForm.onsubmit=e=>{
+    e.preventDefault();
+    const f=new FormData(e.target);
+    const name=(f.get('name')||'').toString().trim();
+    const price=Number(f.get('price'))||0;
+    const client=(f.get('client')||'').toString().trim();
+    const comment=(f.get('comment')||'').toString().trim();
+    const date=f.get('date')||todayStr();
+    // Auto-create matching sellable item
+    const saleItem={id:uid(), name:client? `${name} (${client})` : name, price};
+    DB.saleItems.push(saleItem);
+    DB.commandes.push({id:uid(), saleItemId:saleItem.id, name, price, client, comment, date, status:'waiting'});
+    saveDB(); render();
+  };
+  document.querySelectorAll('[data-cmd-status]').forEach(sel=>sel.onchange=()=>{
+    const id=Number(sel.dataset.cmdStatus);
+    const c=DB.commandes.find(x=>x.id===id); if(!c) return;
+    const prev=c.status;
+    c.status=sel.value;
+    // When newly marked sold, log a sale (once)
+    if(c.status==='sold' && prev!=='sold' && !c.saleLoggedId){
+      const saleId=uid();
+      DB.sales.push({id:saleId, saleItemId:c.saleItemId, quantity:1, price:Number(c.price)||0, date:todayStr()});
+      c.saleLoggedId=saleId;
+    }
+    // If moved away from sold, remove the auto-logged sale
+    if(prev==='sold' && c.status!=='sold' && c.saleLoggedId){
+      DB.sales=DB.sales.filter(s=>s.id!==c.saleLoggedId);
+      delete c.saleLoggedId;
+    }
+    saveDB(); render();
+  });
+  document.querySelectorAll('[data-del-commande]').forEach(el=>el.onclick=async ()=>{
+    if(!await askPin('Code to delete commande','0000')) return;
+    const id=Number(el.dataset.delCommande);
+    const c=DB.commandes.find(x=>x.id===id);
+    if(c && c.saleLoggedId) DB.sales=DB.sales.filter(s=>s.id!==c.saleLoggedId);
+    DB.commandes=DB.commandes.filter(x=>x.id!==id);
+    saveDB(); render();
+  });
+
   // ADMIN
   const btnUnlockAdmin=document.getElementById('btnUnlockAdmin');
   if(btnUnlockAdmin) btnUnlockAdmin.onclick=async ()=>{
