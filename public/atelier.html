@@ -624,22 +624,85 @@ function renderAdmin(){
   if(!adminTo) adminTo = todayStr();
 
   const monthsInRange = countMonths(adminFrom, adminTo);
-  let laborCost = 0;
-  DB.workers.forEach(w=>{
-    const adv = DB.advances.filter(a=>a.workerId===w.id && a.date>=adminFrom && a.date<=adminTo).reduce((s,a)=>s+Number(a.amount),0);
+  const inRange = d => d>=adminFrom && d<=adminTo;
+
+  // ---- Labor ----
+  let laborCost = 0, totalAdvances = 0, totalAbsenceDed = 0;
+  const workerBreakdown = DB.workers.map(w=>{
+    const adv = DB.advances.filter(a=>a.workerId===w.id && inRange(a.date)).reduce((s,a)=>s+Number(a.amount),0);
     let ded = 0;
-    DB.absences.filter(a=>a.workerId===w.id && a.date>=adminFrom && a.date<=adminTo).forEach(a=>{
+    DB.absences.filter(a=>a.workerId===w.id && inRange(a.date)).forEach(a=>{
       const mk = monthKey(a.date); const hpd = hoursPerDayForMonth(mk);
       const dailyRate = w.monthlySalary/WORK_DAYS_PER_MONTH, hourlyRate=dailyRate/hpd;
       ded += a.type==='day' ? dailyRate : hourlyRate*Number(a.hours||0);
     });
-    laborCost += (w.monthlySalary*monthsInRange) - adv - ded;
+    const gross = w.monthlySalary*monthsInRange;
+    const net = gross - adv - ded;
+    laborCost += net; totalAdvances += adv; totalAbsenceDed += ded;
+    return {w, gross, adv, ded, net};
   });
-  const purchasesInRange = DB.purchases.filter(p=>p.date>=adminFrom && p.date<=adminTo);
+
+  // ---- Stock ----
+  const purchasesInRange = DB.purchases.filter(p=>inRange(p.date));
   const stockCost = purchasesInRange.reduce((s,p)=>s+Number(p.quantity)*Number(p.unitCost),0);
-  const salesInRange = DB.sales.filter(s=>s.date>=adminFrom && s.date<=adminTo);
+  const withdrawalsInRange = DB.withdrawals.filter(x=>inRange(x.date));
+  const cogs = withdrawalsInRange.reduce((s,x)=>s+Number(x.quantity)*itemAvgCost(x.itemId),0);
+  const lowStock = DB.items.map(it=>({it, stk:itemStock(it.id)})).filter(x=>x.stk<=3);
+
+  // ---- Sales ----
+  const salesInRange = DB.sales.filter(s=>inRange(s.date));
   const revenue = salesInRange.reduce((s,x)=>s+Number(x.quantity)*Number(x.price),0);
-  const profit = revenue - laborCost - stockCost;
+  const salesCount = salesInRange.length;
+  const avgOrder = salesCount? revenue/salesCount : 0;
+  const grossProfit = revenue - cogs;
+  const profit = revenue - laborCost - cogs;
+  const margin = revenue>0 ? (profit/revenue)*100 : 0;
+  const grossMargin = revenue>0 ? (grossProfit/revenue)*100 : 0;
+
+  // Top items by revenue
+  const itemRev = {};
+  salesInRange.forEach(s=>{
+    const si=DB.saleItems.find(x=>x.id===s.saleItemId); const key = si?si.name:'—';
+    itemRev[key] = (itemRev[key]||0) + Number(s.quantity)*Number(s.price);
+  });
+  const topItems = Object.entries(itemRev).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // Commandes status breakdown (in range by date)
+  const cmdInRange = DB.commandes.filter(c=>inRange(c.date));
+  const cmdCounts = {waiting:0, ready:0, sold:0, cancel:0};
+  const cmdValue = {waiting:0, ready:0, sold:0, cancel:0};
+  cmdInRange.forEach(c=>{ cmdCounts[c.status] = (cmdCounts[c.status]||0)+1; cmdValue[c.status]=(cmdValue[c.status]||0)+Number(c.price||0); });
+
+  // Top clients (from commandes)
+  const clientSpend = {};
+  cmdInRange.filter(c=>c.status==='sold').forEach(c=>{
+    const k = (c.client||'—').trim() || '—';
+    clientSpend[k] = (clientSpend[k]||0) + Number(c.price||0);
+  });
+  const topClients = Object.entries(clientSpend).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // Monthly breakdown
+  const months = [];
+  { const a=new Date(adminFrom), b=new Date(adminTo);
+    let y=a.getFullYear(), m=a.getMonth();
+    while(y<b.getFullYear() || (y===b.getFullYear()&&m<=b.getMonth())){
+      months.push(`${y}-${String(m+1).padStart(2,'0')}`);
+      m++; if(m>11){m=0;y++;}
+    }
+  }
+  const monthly = months.map(mk=>{
+    const rev = DB.sales.filter(s=>monthKey(s.date)===mk).reduce((s,x)=>s+Number(x.quantity)*Number(x.price),0);
+    const stk = DB.purchases.filter(p=>monthKey(p.date)===mk).reduce((s,x)=>s+Number(x.quantity)*Number(x.unitCost),0);
+    const lab = DB.workers.reduce((s,w)=>{
+      const adv=DB.advances.filter(a=>a.workerId===w.id && monthKey(a.date)===mk).reduce((t,a)=>t+Number(a.amount),0);
+      let ded=0; DB.absences.filter(a=>a.workerId===w.id && monthKey(a.date)===mk).forEach(a=>{
+        const hpd=hoursPerDayForMonth(mk); const dr=w.monthlySalary/WORK_DAYS_PER_MONTH; const hr=dr/hpd;
+        ded += a.type==='day'?dr:hr*Number(a.hours||0);
+      });
+      return s + (w.monthlySalary - adv - ded);
+    },0);
+    return {mk, rev, stk, lab, profit: rev-lab-stk};
+  });
 
   return `
   <h1>Admin Report</h1>
@@ -652,26 +715,99 @@ function renderAdmin(){
       <div class="field"><label>To</label><input type="date" id="adminTo" value="${adminTo}"></div>
       <button class="btn secondary" id="btnAdminApply">Apply</button>
     </div>
+    <div class="muted" style="font-size:12px;margin-top:6px">Range spans <b>${monthsInRange}</b> month(s) &middot; ${DB.workers.length} worker(s) &middot; ${DB.items.length} item(s)</div>
   </div>
 
   <div class="summary-grid">
+    <div class="stat"><div class="label">Sales revenue</div><div class="value">${money(revenue)}</div></div>
+    <div class="stat"><div class="label">COGS (stock used)</div><div class="value">${money(cogs)}</div></div>
+    <div class="stat"><div class="label">Gross profit</div><div class="value ${grossProfit<0?'neg':'pos'}">${money(grossProfit)}</div></div>
+    <div class="stat"><div class="label">Gross margin</div><div class="value">${grossMargin.toFixed(1)}%</div></div>
     <div class="stat"><div class="label">Labor cost</div><div class="value">${money(laborCost)}</div></div>
     <div class="stat"><div class="label">Stock purchases</div><div class="value">${money(stockCost)}</div></div>
-    <div class="stat"><div class="label">Sales revenue</div><div class="value">${money(revenue)}</div></div>
     <div class="stat"><div class="label">Net profit</div><div class="value ${profit<0?'neg':'pos'}">${money(profit)}</div></div>
+    <div class="stat"><div class="label">Net margin</div><div class="value ${margin<0?'neg':'pos'}">${margin.toFixed(1)}%</div></div>
+    <div class="stat"><div class="label">Sales count</div><div class="value">${salesCount}</div></div>
+    <div class="stat"><div class="label">Avg sale</div><div class="value">${money(avgOrder)}</div></div>
+    <div class="stat"><div class="label">Advances paid</div><div class="value">${money(totalAdvances)}</div></div>
+    <div class="stat"><div class="label">Absence deductions</div><div class="value">${money(totalAbsenceDed)}</div></div>
   </div>
 
   <div class="card">
-    <h2>Workers ranked by performance (current month)</h2>
+    <h2>Monthly breakdown</h2>
     <table>
-      <thead><tr><th>#</th><th>Worker</th><th class="num">Net pay</th><th class="num">Performance</th></tr></thead>
+      <thead><tr><th>Month</th><th class="num">Revenue</th><th class="num">Labor</th><th class="num">Stock</th><th class="num">Profit</th></tr></thead>
       <tbody>
-      ${[...DB.workers].map(w=>workerPayForMonth(w.id, thisMonthKey())).sort((a,b)=>b.performance-a.performance).map((r,i)=>`
-        <tr><td>${i+1}</td><td style="font-family:var(--sans)">${esc(r.worker.name)}</td>
-        <td class="num ${r.net<0?'neg':''}">${money(r.net)}</td><td class="num">${r.performance.toFixed(1)}%</td></tr>
-      `).join('') || '<tr><td colspan="4" class="empty">No workers yet.</td></tr>'}
+      ${monthly.map(r=>`<tr><td>${r.mk}</td>
+        <td class="num">${money(r.rev)}</td>
+        <td class="num">${money(r.lab)}</td>
+        <td class="num">${money(r.stk)}</td>
+        <td class="num ${r.profit<0?'neg':'pos'}">${money(r.profit)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">—</td></tr>'}
       </tbody>
     </table>
+  </div>
+
+  <div class="card">
+    <h2>Workers — payroll in range</h2>
+    <table>
+      <thead><tr><th>#</th><th>Worker</th><th class="num">Gross</th><th class="num">Advances</th><th class="num">Deductions</th><th class="num">Net</th><th class="num">Perf (this month)</th></tr></thead>
+      <tbody>
+      ${workerBreakdown.map(b=>{
+        const perf = workerPayForMonth(b.w.id, thisMonthKey()).performance;
+        return `<tr><td></td><td style="font-family:var(--sans)">${esc(b.w.name)}</td>
+          <td class="num">${money(b.gross)}</td>
+          <td class="num">${money(b.adv)}</td>
+          <td class="num">${money(b.ded)}</td>
+          <td class="num ${b.net<0?'neg':''}">${money(b.net)}</td>
+          <td class="num">${perf.toFixed(1)}%</td></tr>`;
+      }).sort((a,b)=>0).join('') || '<tr><td colspan="7" class="empty">No workers.</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="summary-grid" style="grid-template-columns:repeat(2,1fr)">
+    <div class="card">
+      <h2>Top items by revenue</h2>
+      <table>
+        <thead><tr><th>#</th><th>Item</th><th class="num">Revenue</th></tr></thead>
+        <tbody>
+        ${topItems.map(([n,v],i)=>`<tr><td>${i+1}</td><td style="font-family:var(--sans)">${esc(n)}</td><td class="num">${money(v)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No sales.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>Top clients (paid orders)</h2>
+      <table>
+        <thead><tr><th>#</th><th>Client</th><th class="num">Spend</th></tr></thead>
+        <tbody>
+        ${topClients.map(([n,v],i)=>`<tr><td>${i+1}</td><td style="font-family:var(--sans)">${esc(n)}</td><td class="num">${money(v)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No sold commandes.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="summary-grid" style="grid-template-columns:repeat(2,1fr)">
+    <div class="card">
+      <h2>Commandes status (in range)</h2>
+      <table>
+        <thead><tr><th>Status</th><th class="num">Count</th><th class="num">Value</th></tr></thead>
+        <tbody>
+          <tr><td>${statusPill('waiting')}</td><td class="num">${cmdCounts.waiting}</td><td class="num">${money(cmdValue.waiting)}</td></tr>
+          <tr><td>${statusPill('ready')}</td><td class="num">${cmdCounts.ready}</td><td class="num">${money(cmdValue.ready)}</td></tr>
+          <tr><td>${statusPill('sold')}</td><td class="num">${cmdCounts.sold}</td><td class="num">${money(cmdValue.sold)}</td></tr>
+          <tr><td>${statusPill('cancel')}</td><td class="num">${cmdCounts.cancel}</td><td class="num">${money(cmdValue.cancel)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>Low stock alerts (≤ 3)</h2>
+      <table>
+        <thead><tr><th>Item</th><th>Unit</th><th class="num">Left</th></tr></thead>
+        <tbody>
+        ${lowStock.map(x=>`<tr><td style="font-family:var(--sans)">${esc(x.it.name)}</td><td>${esc(x.it.unit||'-')}</td><td class="num" style="color:#e26060;font-weight:700">${x.stk}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">All items are healthy.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <div class="actions">
