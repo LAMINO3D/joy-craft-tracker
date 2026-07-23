@@ -174,6 +174,11 @@ function itemAvgCost(itemId){
   const cost = p.reduce((s,x)=>s+Number(x.quantity)*Number(x.unitCost),0);
   return qty>0 ? cost/qty : 0;
 }
+function itemStock(itemId){
+  const inQty = DB.purchases.filter(x=>x.itemId===itemId).reduce((s,x)=>s+Number(x.quantity),0);
+  const outQty = DB.withdrawals.filter(x=>x.itemId===itemId).reduce((s,x)=>s+Number(x.quantity),0);
+  return inQty - outQty;
+}
 
 /* ---------------- PIN MODALS ---------------- */
 function askPin(title, expected){
@@ -342,16 +347,20 @@ function renderStock(){
       <button class="btn" type="submit">Add item</button>
     </form>
     <table style="margin-top:14px">
-      <thead><tr><th>Item</th><th>Unit</th><th class="num">Avg cost</th><th></th></tr></thead>
+      <thead><tr><th>Item</th><th>Unit</th><th class="num">In stock</th><th class="num">Avg cost</th><th></th></tr></thead>
       <tbody>
-        ${items.length===0?'<tr><td colspan="4" class="empty">No items yet.</td></tr>':''}
-        ${items.map(it=>`<tr>
+        ${items.length===0?'<tr><td colspan="5" class="empty">No items yet.</td></tr>':''}
+        ${items.map(it=>{
+          const stk=itemStock(it.id);
+          const low=stk<=0;
+          return `<tr>
           <td style="font-family:var(--sans)">${esc(it.name)}</td>
           <td>${esc(it.unit||'-')}</td>
+          <td class="num" style="color:${low?'#e26060':'var(--brass)'};font-weight:700">${stk}</td>
           <td class="num">${money(itemAvgCost(it.id))}</td>
           <td class="num"><button class="btn secondary small" data-edit-item="${it.id}">Edit</button>
           <button class="btn danger small" data-del-item="${it.id}">Delete</button></td>
-        </tr>`).join('')}
+        </tr>`;}).join('')}
       </tbody>
     </table>
   </div>
@@ -751,7 +760,10 @@ function bindEvents(){
   if(btnItemSpendPdf) btnItemSpendPdf.onclick=()=>generateItemSpendPdf();
   const addWithdrawalForm=document.getElementById('addWithdrawalForm');
   if(addWithdrawalForm) addWithdrawalForm.onsubmit=e=>{ e.preventDefault(); const f=new FormData(e.target);
-    DB.withdrawals.push({id:uid(), workerId:Number(f.get('workerId')), itemId:Number(f.get('itemId')), quantity:Number(f.get('quantity')), date:f.get('date')});
+    const itemId=Number(f.get('itemId')); const qty=Number(f.get('quantity'));
+    const avail=itemStock(itemId);
+    if(qty>avail){ alert('Not enough stock. Available: '+avail); return; }
+    DB.withdrawals.push({id:uid(), workerId:Number(f.get('workerId')), itemId, quantity:qty, date:f.get('date')});
     saveDB(); render(); };
   const btnWorkerItemCostPdf=document.getElementById('btnWorkerItemCostPdf');
   if(btnWorkerItemCostPdf) btnWorkerItemCostPdf.onclick=()=>generateWorkerItemCostPdf();
