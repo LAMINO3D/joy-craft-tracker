@@ -352,11 +352,11 @@ function renderStock(){
         ${items.length===0?'<tr><td colspan="5" class="empty">No items yet.</td></tr>':''}
         ${items.map(it=>{
           const stk=itemStock(it.id);
-          const low=stk<=0;
+          const color = stk<=3 ? '#e26060' : 'var(--brass)';
           return `<tr>
           <td style="font-family:var(--sans)">${esc(it.name)}</td>
           <td>${esc(it.unit||'-')}</td>
-          <td class="num" style="color:${low?'#e26060':'var(--brass)'};font-weight:700">${stk}</td>
+          <td class="num" style="color:${color};font-weight:700">${stk}${stk<=3?' ⚠':''}</td>
           <td class="num">${money(itemAvgCost(it.id))}</td>
           <td class="num"><button class="btn secondary small" data-edit-item="${it.id}">Edit</button>
           <button class="btn danger small" data-del-item="${it.id}">Delete</button></td>
