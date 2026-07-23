@@ -322,6 +322,7 @@ function renderWorkerBlock(r, ranked){
     <div class="worker-body ${isOpen?'open':''}">
       <div class="grid2">
         <div>
+          <div class="table-wrap">
           <table>
             <tr><td class="muted">Monthly salary</td><td class="num">${money(w.monthlySalary)}</td></tr>
             <tr><td class="muted">Daily rate</td><td class="num">${money(r.dailyRate)}</td></tr>
@@ -331,6 +332,7 @@ function renderWorkerBlock(r, ranked){
             <tr><td><b>Net pay</b></td><td class="num ${r.net<0?'neg':'pos'}"><b>${money(r.net)}</b></td></tr>
             <tr><td class="muted">Performance</td><td class="num">${r.performance.toFixed(1)}%</td></tr>
           </table>
+          </div>
           <div class="actions" style="margin-top:12px">
             <button class="btn secondary small" data-edit-worker="${w.id}">Edit</button>
             <button class="btn danger small" data-del-worker="${w.id}">Delete</button>
@@ -380,6 +382,7 @@ function renderStock(){
       <div class="field"><label>Unit</label><input name="unit" placeholder="pcs, kg, m..."></div>
       <button class="btn" type="submit">Add item</button>
     </form>
+    <div class="table-wrap">
     <table style="margin-top:14px">
       <thead><tr><th>Item</th><th>Unit</th><th class="num">In stock</th><th class="num">Avg cost</th><th></th></tr></thead>
       <tbody>
@@ -397,6 +400,7 @@ function renderStock(){
         </tr>`;}).join('')}
       </tbody>
     </table>
+    </div>
   </div>
 
   <div class="card">
@@ -418,6 +422,7 @@ function renderStock(){
 
   <div class="card">
     <h2>Purchase history</h2>
+    <div class="table-wrap">
     <table>
       <thead><tr><th>Date</th><th>Item</th><th class="num">Qty</th><th class="num">Unit cost</th><th class="num">Total</th><th>Supplier</th><th>Matricule fiscal</th></tr></thead>
       <tbody>
@@ -433,6 +438,7 @@ function renderStock(){
         }).join('')}
       </tbody>
     </table>
+    </div>
     <div class="actions" style="margin-top:14px">
       <button class="btn secondary" id="btnItemSpendPdf">Item spend PDF</button>
     </div>
@@ -454,6 +460,7 @@ function renderStock(){
       <div class="field"><label>Date</label><input type="date" name="date" value="${todayStr()}" required></div>
       <button class="btn" type="submit">Log withdrawal</button>
     </form>`}
+    <div class="table-wrap">
     <table style="margin-top:14px">
       <thead><tr><th>Date</th><th>Worker</th><th>Item</th><th class="num">Qty</th><th class="num">Cost</th></tr></thead>
       <tbody>
@@ -466,6 +473,7 @@ function renderStock(){
         }).join('')}
       </tbody>
     </table>
+    </div>
     <div class="actions" style="margin-top:14px">
       <button class="btn secondary" id="btnWorkerItemCostPdf">Worker item-cost PDF</button>
     </div>
@@ -495,6 +503,7 @@ function renderSales(){
       <div class="field"><label>Price (DT)</label><input type="number" step="any" min="0" name="price" required></div>
       <button class="btn" type="submit">Add item</button>
     </form>
+    <div class="table-wrap">
     <table style="margin-top:14px">
       <thead><tr><th>Item</th><th class="num">Price</th><th></th></tr></thead>
       <tbody>
@@ -506,6 +515,7 @@ function renderSales(){
         </tr>`).join('')}
       </tbody>
     </table>
+    </div>
   </div>
 
   <div class="card">
@@ -545,6 +555,7 @@ function renderSales(){
       <div class="field"><label>Price each (DT)</label><input type="number" step="any" min="0" id="fPrice" value="${DB.saleItems[0]?.price||0}"></div>
       <button class="btn secondary" id="btnAddFactureLine" type="button">Add line</button>
     </div>
+    <div class="table-wrap">
     <table>
       <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Total</th><th></th></tr></thead>
       <tbody id="factureLinesBody">
@@ -555,6 +566,7 @@ function renderSales(){
         </tr>`).join('')}
       </tbody>
     </table>
+    </div>
     <div class="row" style="margin-top:14px;justify-content:space-between">
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)"><input type="checkbox" id="fLogSales" checked> Also log these as sales</label>
       <button class="btn" id="btnGenerateFacture" type="button">Generate facture PDF</button>
@@ -564,6 +576,7 @@ function renderSales(){
 
   <div class="card">
     <h2>Sales history</h2>
+    <div class="table-wrap">
     <table>
       <thead><tr><th>Date</th><th>Item</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Revenue</th></tr></thead>
       <tbody>
@@ -576,6 +589,7 @@ function renderSales(){
         }).join('')}
       </tbody>
     </table>
+    </div>
     <div class="actions" style="margin-top:14px">
       <button class="btn secondary" id="btnSalesPdf">Sales PDF</button>
       <button class="btn danger" id="btnResetSales">Reset Sales History</button>
@@ -615,6 +629,7 @@ function renderCommandes(){
 
   <div class="card">
     <h2>All commandes</h2>
+    <div class="table-wrap">
     <table>
       <thead><tr>
         <th>Date</th><th>Item</th><th>Client</th><th>Comment</th>
@@ -638,6 +653,7 @@ function renderCommandes(){
         </tr>`).join('')}
       </tbody>
     </table>
+    </div>
   </div>
   `;
 }
@@ -769,6 +785,7 @@ function renderAdmin(){
 
   <div class="card">
     <h2>Monthly breakdown</h2>
+    <div class="table-wrap">
     <table>
       <thead><tr><th>Month</th><th class="num">Revenue</th><th class="num">Labor</th><th class="num">Stock</th><th class="num">Profit</th></tr></thead>
       <tbody>
@@ -779,10 +796,12 @@ function renderAdmin(){
         <td class="num ${r.profit<0?'neg':'pos'}">${money(r.profit)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">—</td></tr>'}
       </tbody>
     </table>
+    </div>
   </div>
 
   <div class="card">
     <h2>Workers — payroll in range</h2>
+    <div class="table-wrap">
     <table>
       <thead><tr><th>#</th><th>Worker</th><th class="num">Gross</th><th class="num">Advances</th><th class="num">Deductions</th><th class="num">Net</th><th class="num">Perf (this month)</th></tr></thead>
       <tbody>
@@ -797,32 +816,38 @@ function renderAdmin(){
       }).sort((a,b)=>0).join('') || '<tr><td colspan="7" class="empty">No workers.</td></tr>'}
       </tbody>
     </table>
+    </div>
   </div>
 
   <div class="summary-grid" style="grid-template-columns:repeat(2,1fr)">
     <div class="card">
       <h2>Top items by revenue</h2>
+      <div class="table-wrap">
       <table>
         <thead><tr><th>#</th><th>Item</th><th class="num">Revenue</th></tr></thead>
         <tbody>
         ${topItems.map(([n,v],i)=>`<tr><td>${i+1}</td><td style="font-family:var(--sans)">${esc(n)}</td><td class="num">${money(v)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No sales.</td></tr>'}
         </tbody>
       </table>
+      </div>
     </div>
     <div class="card">
       <h2>Top clients (paid orders)</h2>
+      <div class="table-wrap">
       <table>
         <thead><tr><th>#</th><th>Client</th><th class="num">Spend</th></tr></thead>
         <tbody>
         ${topClients.map(([n,v],i)=>`<tr><td>${i+1}</td><td style="font-family:var(--sans)">${esc(n)}</td><td class="num">${money(v)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No sold commandes.</td></tr>'}
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 
   <div class="summary-grid" style="grid-template-columns:repeat(2,1fr)">
     <div class="card">
       <h2>Commandes status (in range)</h2>
+      <div class="table-wrap">
       <table>
         <thead><tr><th>Status</th><th class="num">Count</th><th class="num">Value</th></tr></thead>
         <tbody>
@@ -832,15 +857,18 @@ function renderAdmin(){
           <tr><td>${statusPill('cancel')}</td><td class="num">${cmdCounts.cancel}</td><td class="num">${money(cmdValue.cancel)}</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
     <div class="card">
       <h2>Low stock alerts (≤ 3)</h2>
+      <div class="table-wrap">
       <table>
         <thead><tr><th>Item</th><th>Unit</th><th class="num">Left</th></tr></thead>
         <tbody>
         ${lowStock.map(x=>`<tr><td style="font-family:var(--sans)">${esc(x.it.name)}</td><td>${esc(x.it.unit||'-')}</td><td class="num" style="color:#e26060;font-weight:700">${x.stk}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">All items are healthy.</td></tr>'}
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 
