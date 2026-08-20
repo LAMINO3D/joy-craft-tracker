@@ -9,7 +9,7 @@
 <style>
 :root{
   --bg:#0e141f; --bg2:#131b28; --card:#182231; --card2:#1f2b3d;
-  --line:#2a3away; --line:#28344a; --text:#e8edf5; --muted:#9fb0c9; --muted2:#6d7f99;
+  --line:#28344a; --text:#e8edf5; --muted:#9fb0c9; --muted2:#6d7f99;
   --brass:#f59e5c; --brass-dim:#a8683a; --green:#34d399; --red:#f2645a;
   --blue:#4c8bf5; --primary:#2563eb; --primary-hi:#3b82f6; --teal:#2dd4bf;
   --radius:12px;
@@ -172,7 +172,7 @@ footer.hint{font-size:11.5px;color:var(--muted2);margin-top:8px}
 <body>
 <div class="app">
   <div class="sidebar">
-    <div class="brand">Atelier Ledger<small>Stock &middot; Payroll &middot; Sales</small></div>
+    <div class="brand">SMT DU SAHEL<small>Stock &middot; Payroll &middot; Sales</small></div>
     <div class="nav" id="nav">
       <button class="nav-btn" data-tab="workers"><span class="idx">01</span> Workers &amp; Pay</button>
       <button class="nav-btn" data-tab="stock"><span class="idx">02</span> Stock &amp; Purchases</button>
@@ -182,6 +182,9 @@ footer.hint{font-size:11.5px;color:var(--muted2);margin-top:8px}
     </div>
   </div>
   <div class="main" id="main"></div>
+</div>
+<div id="toasts"></div>
+<div style="display:none">
 </div>
 
 <script>
@@ -221,6 +224,16 @@ function saveDB(){
   }, 150);
 }
 function uid(){ return DB.seq++; }
+
+/* ---------------- UI FEEDBACK ---------------- */
+function toast(msg, kind){
+  const host=document.getElementById('toasts'); if(!host){ return; }
+  const el=document.createElement('div');
+  el.className='toast'+(kind?' '+kind:'');
+  el.textContent=msg;
+  host.appendChild(el);
+  setTimeout(()=>{ el.classList.add('hide'); setTimeout(()=>el.remove(),240); }, 3200);
+}
 
 /* ---------------- HELPERS ---------------- */
 function money(n){ n = Number(n)||0; return (n<0?'-':'') + 'DT ' + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -653,10 +666,10 @@ function renderSales(){
 const COMMANDE_STATUSES = ['waiting','ready','sold','cancel'];
 function statusPill(s){
   const colors = {
-    waiting:'background:rgba(91,143,176,.18);color:var(--blue)',
-    ready:'background:rgba(201,162,75,.18);color:var(--brass)',
-    sold:'background:rgba(92,154,104,.18);color:var(--green)',
-    cancel:'background:rgba(193,68,60,.15);color:var(--red)'
+    waiting:'background:rgba(76,139,245,.16);color:#7fb0ff',
+    ready:'background:rgba(245,158,92,.16);color:var(--brass)',
+    sold:'background:rgba(52,211,153,.16);color:var(--green)',
+    cancel:'background:rgba(242,100,90,.16);color:var(--red)'
   };
   return `<span class="pill" style="${colors[s]||''}">${s}</span>`;
 }
@@ -1011,7 +1024,7 @@ function bindEvents(){
   if(addWithdrawalForm) addWithdrawalForm.onsubmit=e=>{ e.preventDefault(); const f=new FormData(e.target);
     const itemId=Number(f.get('itemId')); const qty=Number(f.get('quantity'));
     const avail=itemStock(itemId);
-    if(qty>avail){ alert('Not enough stock. Available: '+avail); return; }
+    if(qty>avail){ toast('Not enough stock. Available: '+avail,'error'); return; }
     DB.withdrawals.push({id:uid(), workerId:Number(f.get('workerId')), itemId, quantity:qty, date:f.get('date')});
     saveDB(); render(); };
   const btnWorkerItemCostPdf=document.getElementById('btnWorkerItemCostPdf');
@@ -1085,7 +1098,7 @@ function bindEvents(){
   });
   const btnGenerateFacture=document.getElementById('btnGenerateFacture');
   if(btnGenerateFacture) btnGenerateFacture.onclick=()=>{
-    if(factureLines.length===0){ alert('Add at least one line first.'); return; }
+    if(factureLines.length===0){ toast('Add at least one line first.','warn'); return; }
     const client = {
       name: fState.clientName.trim() || '—',
       address: fState.clientAddress.trim() || '—',
