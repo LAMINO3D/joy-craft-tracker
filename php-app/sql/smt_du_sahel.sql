@@ -195,11 +195,11 @@ CREATE TABLE `audit_log` (
 -- Mots de passe de tous les comptes ci-dessous : Smt2026!
 -- ------------------------------------------------------------
 INSERT INTO `utilisateurs` (`nom`,`prenom`,`email`,`mot_de_passe`,`role`) VALUES
-('Sahel','Admin','admin@smtdusahel.tn','$2y$10$eImiTXuWVxfM37uY4JANjQ.Mv3RaPn0e2AVeXQZ8gXi1lYh0jFRvC','admin'),
-('Ben Ali','Achats','achats@smtdusahel.tn','$2y$10$eImiTXuWVxfM37uY4JANjQ.Mv3RaPn0e2AVeXQZ8gXi1lYh0jFRvC','achats'),
-('Trabelsi','Stock','stock@smtdusahel.tn','$2y$10$eImiTXuWVxfM37uY4JANjQ.Mv3RaPn0e2AVeXQZ8gXi1lYh0jFRvC','stock'),
-('Jouini','RH','rh@smtdusahel.tn','$2y$10$eImiTXuWVxfM37uY4JANjQ.Mv3RaPn0e2AVeXQZ8gXi1lYh0jFRvC','rh'),
-('Mabrouk','Commercial','commercial@smtdusahel.tn','$2y$10$eImiTXuWVxfM37uY4JANjQ.Mv3RaPn0e2AVeXQZ8gXi1lYh0jFRvC','commercial');
+('Sahel','Admin','admin@smtdusahel.tn','$2y$12$WfoBhbKNNe2WvBzfZXGdhe7ndnjHoEpbkLLLRrE1IRboWUYWOeP86','admin'),
+('Ben Ali','Achats','achats@smtdusahel.tn','$2y$12$WfoBhbKNNe2WvBzfZXGdhe7ndnjHoEpbkLLLRrE1IRboWUYWOeP86','achats'),
+('Trabelsi','Stock','stock@smtdusahel.tn','$2y$12$WfoBhbKNNe2WvBzfZXGdhe7ndnjHoEpbkLLLRrE1IRboWUYWOeP86','stock'),
+('Jouini','RH','rh@smtdusahel.tn','$2y$12$WfoBhbKNNe2WvBzfZXGdhe7ndnjHoEpbkLLLRrE1IRboWUYWOeP86','rh'),
+('Mabrouk','Commercial','commercial@smtdusahel.tn','$2y$12$WfoBhbKNNe2WvBzfZXGdhe7ndnjHoEpbkLLLRrE1IRboWUYWOeP86','commercial');
 
 INSERT INTO `fournisseurs` (`nom`,`telephone`,`adresse`,`specialite`,`conditions_paiement`) VALUES
 ('Bois du Sahel SARL','+216 73 200 100','Zone industrielle, Sousse','Bois massif et contreplaque','30 jours fin de mois'),
